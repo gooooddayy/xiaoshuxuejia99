@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>九九乘法表 · 背诵 / 练习</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg1: #eef2ff;
+    --bg2: #fef3f2;
+    --card: #ffffff;
+    --ink: #1f2937;
+    --muted: #9ca3af;
+    --accent: #6366f1;
+    --accent-soft: #eef2ff;
+    --green: #16a34a;
+    --yellow: #ca8a04;
+    --red: #dc2626;
+  }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, sans-serif;
+    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    color: var(--ink);
+    padding: 28px 16px 110px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1 { font-size: 26px; font-weight: 800; letter-spacing: 2px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); font-size: 14px; margin-bottom: 18px; }
+  .mode-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--accent-soft); color: var(--accent);
+    font-size: 13px; font-weight: 600; padding: 5px 14px;
+    border-radius: 999px; margin-bottom: 22px;
+  }
+  .mode-tag .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+
+  .board {
+    background: transparent; border-radius: 20px;
+    container-type: inline-size;
+  }
+  .board-recite    { width: min(760px, 100%); padding: 24px; }
+  .board-practice  { width: min(560px, 100%); padding: 22px; }
+
+  /* —— 背诵模式：三角表 —— */
+  #recite .row { display: grid; grid-template-columns: repeat(9, 1fr); gap: 8px; margin-bottom: 10px; }
+  #recite .cell {
+    container-type: inline-size;
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+    font-size: clamp(6px, 16cqi, 13px); font-weight: 700; color: var(--ink);
+    padding: 12px 2px; border-radius: 12px; overflow: hidden;
+    white-space: nowrap;
+  }
+  #recite .cell.lvl-green  { background: var(--green); }
+  #recite .cell.lvl-yellow { background: var(--yellow); }
+  #recite .cell.lvl-red    { background: var(--red); }
+  #recite .cell b { color: var(--ink); font-weight: 800; }
+
+  /* —— 练习模式：9×9 网格 —— */
+  #practice { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
+  #practice .cell {
+    position: relative;
+    aspect-ratio: 1 / 1;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 10px;
+    cursor: pointer; user-select: none;
+    font-size: clamp(9px, 3cqi, 15px); font-weight: 700; color: #fff;
+    white-space: nowrap;
+    transition: filter .18s, transform .18s;
+  }
+  #practice .cell .expr { overflow: hidden; max-width: 100%; }
+  #practice .cell.lvl-green  { background: var(--green); }
+  #practice .cell.lvl-yellow { background: var(--yellow); }
+  #practice .cell.lvl-red    { background: var(--red); }
+  #practice .cell:hover { filter: brightness(1.1); transform: translateY(-2px); }
+
+  /* 悬停弹出的结果气泡 */
+  #practice .pop {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translate(-50%, 6px) scale(.9);
+    margin-bottom: 8px;
+    background: var(--ink);
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    padding: 7px 12px;
+    border-radius: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .16s ease, transform .16s ease;
+    z-index: 5;
+    box-shadow: 0 8px 20px rgba(0,0,0,.18);
+  }
+  #practice .pop b { color: #7dd3a8; }
+  #practice .pop::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 6px solid transparent;
+    border-top-color: var(--ink);
+  }
+  #practice .cell:hover .pop {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  .switch-wrap { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 10; }
+  .switch-btn {
+    border: none; cursor: pointer; background: var(--accent); color: #fff;
+    font-size: 16px; font-weight: 700; letter-spacing: 1px;
+    padding: 14px 30px; border-radius: 999px; text-decoration: none;
+    box-shadow: 0 10px 26px rgba(99, 102, 241, 0.45);
+    transition: transform .15s, box-shadow .15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .switch-btn:hover { transform: translateY(-2px); box-shadow: 0 14px 30px rgba(99, 102, 241, 0.5); }
+  .switch-btn:active { transform: translateY(0); }
+  .switch-btn .ico { font-size: 18px; }
+
+  /* 移动端适配 */
+  @media (max-width: 480px) {
+    body { padding: 20px 12px 96px; }
+    h1 { font-size: 22px; }
+    .subtitle { font-size: 13px; margin-bottom: 14px; }
+    .board-recite   { padding: 16px; }
+    .board-practice { padding: 14px; }
+    #recite .row { gap: 5px; margin-bottom: 7px; }
+    #practice { gap: 4px; }
+    .switch-btn { font-size: 15px; padding: 12px 22px; }
+  }
+</style>
+</head>
+<body>
+  <h1>九九乘法表</h1>
+  <div class="subtitle" id="subtitle">背得熟，算得快</div>
+  <div class="mode-tag"><span class="dot"></span><span id="modeLabel">背诵模式</span></div>
+
+  <!-- 背诵模式 -->
+  <div class="board board-recite" id="reciteBoard">
+    <div id="recite"></div>
+  </div>
+
+  <!-- 练习模式 -->
+  <div class="board board-practice" id="practiceBoard" style="display:none">
+    <div id="practice"></div>
+  </div>
+
+  <div class="switch-wrap">
+    <button class="switch-btn" id="switchBtn" type="button">
+      <span class="ico">🔁</span><span id="switchText">切换到练习模式</span>
+    </button>
+  </div>
+
+<script>
+  // 颜色按难度划分：最简单 / 中等 / 最难
+  function levelClass(n) {
+    if (n === 1 || n === 2 || n === 5 || n === 9) return 'lvl-green';
+    if (n === 3 || n === 4 || n === 6) return 'lvl-yellow';
+    return 'lvl-red';
+  }
+
+  // 背诵模式：三角表（行 i，列 j = 1..i），按第二个乘数上色
+  (function () {
+    const box = document.getElementById('recite');
+    let html = '';
+    for (let i = 1; i <= 9; i++) {
+      html += '<div class="row">';
+      for (let j = 1; j <= i; j++) {
+        html += `<div class="cell ${levelClass(j)}">${j}×${i}=<b>${j * i}</b></div>`;
+      }
+      html += '</div>';
+    }
+    box.innerHTML = html;
+  })();
+
+  // 练习模式：完整 9x9 矩形，平时只显示算式，悬停弹出结果
+  (function () {
+    const box = document.getElementById('practice');
+    let html = '';
+    for (let i = 1; i <= 9; i++) {
+      for (let j = 1; j <= 9; j++) {
+        html += `<div class="cell ${levelClass(Math.min(i, j))}"><span class="expr">${i}×${j}</span>
+                    <span class="pop">${i}×${j}=<b>${i * j}</b></span>
+                  </div>`;
+      }
+    }
+    box.innerHTML = html;
+  })();
+
+  // 模式切换：默认背诵模式，点击按钮自由切换
+  (function () {
+    const reciteBoard   = document.getElementById('reciteBoard');
+    const practiceBoard = document.getElementById('practiceBoard');
+    const modeLabel     = document.getElementById('modeLabel');
+    const subtitle      = document.getElementById('subtitle');
+    const switchText    = document.getElementById('switchText');
+    const switchBtn     = document.getElementById('switchBtn');
+
+    function setMode(mode) {
+      if (mode === 'recite') {
+        reciteBoard.style.display = '';
+        practiceBoard.style.display = 'none';
+        modeLabel.textContent = '背诵模式';
+        subtitle.textContent = '背得熟，算得快';
+        switchText.textContent = '切换到练习模式';
+      } else {
+        reciteBoard.style.display = 'none';
+        practiceBoard.style.display = '';
+        modeLabel.textContent = '练习模式';
+        subtitle.textContent = '停在格子上看答案';
+        switchText.textContent = '切换到背诵模式';
+      }
+    }
+
+    switchBtn.addEventListener('click', function () {
+      const toPractice = reciteBoard.style.display !== 'none';
+      setMode(toPractice ? 'practice' : 'recite');
+    });
+  })();
+</script>
+</body>
+</html>
